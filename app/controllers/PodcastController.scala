@@ -16,7 +16,6 @@ import scala.language.postfixOps
 
 import javax.inject._
 
-import java.io._
 
 @Singleton
 class PodcastController @Inject() (
@@ -24,7 +23,6 @@ class PodcastController @Inject() (
     rss: RSSClient,
     ws: WSClient
 ) (implicit val ex: ExecutionContext) extends InjectedController {
-    
 
     def lookupPodcast(query: String) = Action.async { request =>
         val podcasts = iTunes.lookupPodcasts(query)
@@ -32,7 +30,7 @@ class PodcastController @Inject() (
         val withEpisodes = iTunes.retrieveEpisodes(ps)
         val we = Await.result(withEpisodes, 2 seconds)
         play.Logger.info("Downloading podcast...")
-        we.head.download(5)
+        we.head.download_episode(5)
         val resp = Await.result(ws.url(we.head.episodes.head.audioUrl).get, 180 seconds)
         Future(Ok(Json.toJson(we)))
     }

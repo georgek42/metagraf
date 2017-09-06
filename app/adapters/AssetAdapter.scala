@@ -8,7 +8,7 @@ import javax.inject.Inject
 
 import java.io.{ BufferedInputStream, BufferedOutputStream, FileInputStream, FileOutputStream }
 
-class ResourceAdapter @Inject() (
+class AssetAdapter @Inject() (
     ws: WSClient
 ) (implicit val ex: ExecutionContext) {
 

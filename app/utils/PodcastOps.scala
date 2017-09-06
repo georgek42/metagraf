@@ -5,7 +5,7 @@ import scala.util.{ Try, Success, Failure }
 import scala.concurrent.{ Future, ExecutionContext }
 
 import models.{ Podcast }
-import adapters.{ ResourceAdapter }
+import adapters.{ AssetAdapter }
 
 import javax.inject.Inject
 
@@ -14,12 +14,12 @@ class PodcastOps (
 ) {
     import PodcastOps._
 
-    private var adapter: ResourceAdapter = null
+    private var adapter: AssetAdapter = null
     private implicit var ex: ExecutionContext = null
 
     @Inject()
     private def injectAdapters (
-        adapter: ResourceAdapter,
+        adapter: AssetAdapter,
         ex: ExecutionContext
     ) = {
         this.adapter = adapter

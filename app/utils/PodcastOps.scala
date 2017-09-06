@@ -4,36 +4,52 @@ import scala.language.implicitConversions
 import scala.util.{ Try, Success, Failure }
 import scala.concurrent.{ Future, ExecutionContext }
 
-import models.{ Podcast }
+import models.{ Podcast, Episode }
 import adapters.{ AssetAdapter }
 
-import javax.inject.Inject
+class InjectedPodcastOps (
+    podcast: Podcast,
+    adapter: AssetAdapter,
+    implicit var ex: ExecutionContext
+) {
+    import PodcastOps._
+
+    def downloadEpisode(episodeNum: Int): Future[Array[Byte]] = {
+        val episode: Episode = Try(podcast.episodes(episodeNum)) match {
+            case Success(episode) => episode
+            case Failure(e) => throw EpisodeNotFound
+        }
+
+        adapter.download(episode.audioUrl) map { resp => resp.bodyAsBytes.toArray }
+    }
+}
 
 class PodcastOps (
     podcast: Podcast
 ) {
     import PodcastOps._
 
-    private var adapter: AssetAdapter = null
-    private implicit var ex: ExecutionContext = null
-
-    @Inject()
-    private def injectAdapters (
+    def using(
         adapter: AssetAdapter,
         ex: ExecutionContext
-    ) = {
-        this.adapter = adapter
-        this.ex = ex
+    ): InjectedPodcastOps = {
+        new InjectedPodcastOps(podcast, adapter, ex)
     }
-    
-    def download_episode(episodeNum: Int): Future[Array[Byte]] = {
-        val episode = Try(podcast.episodes(episodeNum)) match {
-            case Success(episode) => episode
-            case Failure(e) => throw EpisodeNotFound
-        }
 
-        adapter.download(episode.audioUrl).map { resp => resp.bodyAsBytes.toArray }
-    }
+    def findEpisodes (
+        title: Option[String] = None,
+        description: Option[String] = None,
+        pubDate: Option[String] = None,
+        duration: Option[String] = None,
+        audioUrl: Option[String] = None): List[Episode] = {
+            podcast.episodes.filter { ep =>
+                (title.isEmpty || (title.isDefined && ep.title == title.get)) &&
+                (description.isEmpty || (description.isDefined && ep.description == description.get)) &&
+                (pubDate.isEmpty || (pubDate.isDefined && ep.pubDate == pubDate.get)) &&
+                (duration.isEmpty || (duration.isDefined && ep.duration == duration.get)) &&
+                (audioUrl.isEmpty || (audioUrl.isDefined && ep.audioUrl == audioUrl.get))
+            }
+        }
 }
 
 object PodcastOps {

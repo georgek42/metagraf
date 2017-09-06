@@ -7,6 +7,7 @@ import play.api.libs.ws.{ WSClient, WSRequest, WSResponse }
 
 import clients.{ ITunesClient, RSSClient }
 import models.{ Podcast }
+import adapters.{ AssetAdapter }
 import utils.PodcastOps._
 
 import scala.concurrent.{ Future, ExecutionContext }
@@ -21,7 +22,8 @@ import javax.inject._
 class PodcastController @Inject() (
     iTunes: ITunesClient,
     rss: RSSClient,
-    ws: WSClient
+    ws: WSClient,
+    assetAdapter: AssetAdapter
 ) (implicit val ex: ExecutionContext) extends InjectedController {
 
     def lookupPodcast(query: String) = Action.async { request =>
@@ -29,9 +31,10 @@ class PodcastController @Inject() (
         val ps = Await.result(podcasts, 2 seconds)
         val withEpisodes = iTunes.retrieveEpisodes(ps)
         val we = Await.result(withEpisodes, 2 seconds)
-        play.Logger.info("Downloading podcast...")
-        we.head.download_episode(5)
-        val resp = Await.result(ws.url(we.head.episodes.head.audioUrl).get, 180 seconds)
-        Future(Ok(Json.toJson(we)))
+
+        // Download last podcast
+        val audio = Await.result(we.head.using(assetAdapter, ex).downloadEpisode(5), 2 seconds)
+
+        Future(Ok(Json.toJson("ok")))
     }
 }
